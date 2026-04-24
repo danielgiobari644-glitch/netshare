@@ -23,9 +23,20 @@
                 </header>
 
                 <div class="input-section">
+                    <!-- Added Saved Networks Section -->
+                    <div class="history-container" id="historyContainer" style="display: none;">
+                        <label>Stored Networks</label>
+                        <div id="historyList" class="history-list"></div>
+                    </div>
+
                     <div class="input-group">
                         <label for="ssid">Network SSID</label>
-                        <input type="text" id="ssid" placeholder="e.g. Hyper-Link_5G" autocomplete="off">
+                        <div class="input-with-status">
+                            <input type="text" id="ssid" placeholder="e.g. Hyper-Link_5G" autocomplete="off">
+                            <div id="networkStatus" class="network-status" title="Connection Status">
+                                <span class="status-dot"></span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="input-group">
