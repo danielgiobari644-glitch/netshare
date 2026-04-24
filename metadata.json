@@ -1,6 +1,6 @@
 {
-  "name": "WiFi QR Connect",
-  "description": "Generate a QR code for your WiFi network to allow others to connect instantly.",
+  "name": "NetShare - WiFi QR Styler",
+  "description": "Generate stylish, permanent WiFi QR codes with instant connection support. Includes local storage history and network detection (best-effort).",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

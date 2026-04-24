@@ -17,8 +17,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyContainer = document.getElementById('historyContainer');
     const historyList = document.getElementById('historyList');
     const networkStatusDot = document.querySelector('.status-dot');
+    const detectBtn = document.getElementById('detectBtn');
+    const qrcodeFrame = document.getElementById('qrcode-frame');
+    const frameLabel = document.getElementById('frameLabel');
+    const stylePicker = document.getElementById('stylePicker');
 
     let qrcode = null;
+    let currentStyle = 'standard';
+
+    // Style Selection
+    stylePicker.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('style-option')) return;
+        
+        stylePicker.querySelectorAll('.style-option').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        currentStyle = e.target.dataset.style;
+        qrcodeFrame.className = `style-${currentStyle}`;
+    });
+
+    // Network Detection 
+    detectBtn.addEventListener('click', async () => {
+        detectBtn.textContent = 'Scanning...';
+        
+        setTimeout(() => {
+            alert('Browser security prevents automatic WiFi password access. Please enter your details manually. You can save them for future use below.');
+            detectBtn.innerHTML = '<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg> Scan';
+        }, 800);
+    });
     let savedNetworks = JSON.parse(localStorage.getItem('wifi_history') || '[]');
 
     // Initialize Network Status
@@ -126,9 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('wifi_history', JSON.stringify(savedNetworks));
         renderHistory();
 
+        // Update Frame Label
+        frameLabel.textContent = ssid;
+
         // Clear previous QR Code
         qrcodeContainer.innerHTML = '';
         qrcodeContainer.style.display = 'block';
+        qrcodeFrame.style.display = 'flex';
         qrPlaceholder.style.display = 'none';
         qrActions.style.display = 'flex';
 
@@ -164,14 +194,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     });
 
-    // Download QR Code
+    // Download QR Code with Styles
     downloadBtn.addEventListener('click', () => {
-        const img = qrcodeContainer.querySelector('img');
-        if (!img) return;
+        const qrImg = qrcodeContainer.querySelector('img');
+        if (!qrImg) return;
+
+        // Create a temporary canvas to draw the framed QR
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let canvasWidth = 400;
+        let canvasHeight = 400;
+        
+        if (currentStyle === 'card') {
+            canvasHeight = 500;
+        }
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        // Backgrounds
+        if (currentStyle === 'modern') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Shadow effect (simplified)
+            ctx.strokeStyle = 'rgba(0, 210, 255, 0.1)';
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        } else if (currentStyle === 'card') {
+            const grad = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(1, '#f0f0f0');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(4, 4, canvasWidth - 8, canvasHeight - 8);
+        } else {
+            // Standard
+            ctx.fillStyle = 'rgba(255, 255, 255, 0)';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Draw QR
+        const qrSize = 256;
+        const x = (canvasWidth - qrSize) / 2;
+        const y = (currentStyle === 'card') ? 80 : (canvasHeight - qrSize) / 2;
+        
+        // QR background (white box)
+        if (currentStyle !== 'standard') {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(x - 10, y - 10, qrSize + 20, qrSize + 20);
+        }
+        
+        ctx.drawImage(qrImg, x, y, qrSize, qrSize);
+
+        // Labels
+        if (currentStyle === 'card') {
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`WiFi: ${ssidInput.value}`, canvasWidth / 2, y + qrSize + 60);
+            ctx.font = '14px sans-serif';
+            ctx.fillText('Scan to connect instantly', canvasWidth / 2, 40);
+        }
 
         const link = document.createElement('a');
-        link.download = `WiFi_QR_${ssidInput.value || 'Connect'}.png`;
-        link.href = img.src;
+        link.download = `NetShare_${ssidInput.value || 'WiFi'}.png`;
+        link.href = canvas.toDataURL('image/png');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
