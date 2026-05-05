@@ -18,12 +18,82 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyList = document.getElementById('historyList');
     const networkStatusDot = document.querySelector('.status-dot');
     const detectBtn = document.getElementById('detectBtn');
+    const scanBtn = document.getElementById('scanBtn');
+    const scannerOverlay = document.getElementById('scannerOverlay');
+    const closeScanner = document.getElementById('closeScanner');
     const qrcodeFrame = document.getElementById('qrcode-frame');
     const frameLabel = document.getElementById('frameLabel');
     const stylePicker = document.getElementById('stylePicker');
 
     let qrcode = null;
+    let html5QrCode = null;
     let currentStyle = 'standard';
+
+    // QR Scanning Logic
+    const startScanner = async () => {
+        scannerOverlay.style.display = 'flex';
+        html5QrCode = new Html5Qrcode("reader");
+        
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        try {
+            await html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                (decodedText) => {
+                    parseWifiQR(decodedText);
+                    stopScanner();
+                }
+            );
+        } catch (err) {
+            console.error("Scanner error:", err);
+            alert("Could not start camera. Please ensure you have given permission.");
+            stopScanner();
+        }
+    };
+
+    const stopScanner = () => {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                scannerOverlay.style.display = 'none';
+            }).catch(err => {
+                console.error("Stop error:", err);
+                scannerOverlay.style.display = 'none';
+            });
+        } else {
+            scannerOverlay.style.display = 'none';
+        }
+    };
+
+    const parseWifiQR = (text) => {
+        if (!text.startsWith('WIFI:')) {
+            alert("This doesn't look like a WiFi QR code.");
+            return;
+        }
+
+        const ssidMatch = text.match(/S:([^;]+);/);
+        const passMatch = text.match(/P:([^;]+);/);
+        const encMatch = text.match(/T:([^;]*);/);
+        const hidMatch = text.match(/H:([^;]+);/);
+
+        if (ssidMatch) ssidInput.value = unescapeWifi(ssidMatch[1]);
+        if (passMatch) passwordInput.value = unescapeWifi(passMatch[1]);
+        if (encMatch) encryptionSelect.value = encMatch[1] || 'nopass';
+        if (hidMatch) hiddenCheckbox.checked = hidMatch[1] === 'true';
+        
+        generateBtn.click();
+    };
+
+    const unescapeWifi = (str) => {
+        return str.replace(/\\;/g, ';')
+                  .replace(/\\:/g, ':')
+                  .replace(/\\,/g, ',')
+                  .replace(/\\\\/g, '\\');
+    };
+
+    scanBtn.addEventListener('click', startScanner);
+    closeScanner.addEventListener('click', stopScanner);
 
     // Style Selection
     stylePicker.addEventListener('click', (e) => {
@@ -36,14 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
         qrcodeFrame.className = `style-${currentStyle}`;
     });
 
-    // Network Detection 
-    detectBtn.addEventListener('click', async () => {
-        detectBtn.textContent = 'Scanning...';
-        
-        setTimeout(() => {
-            alert('Browser security prevents automatic WiFi password access. Please enter your details manually. You can save them for future use below.');
-            detectBtn.innerHTML = '<svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg> Scan';
-        }, 800);
+    // Network Status Refresh
+    detectBtn.addEventListener('click', () => {
+        updateNetworkStatus();
+        const status = navigator.onLine ? 'Online' : 'Offline';
+        alert(`Status: ${status}. Browser policies restrict access to nearby WiFi lists for privacy. Use "Scan QR" to import from a router or existing safe code.`);
     });
     let savedNetworks = JSON.parse(localStorage.getItem('wifi_history') || '[]');
 

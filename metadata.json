@@ -1,6 +1,6 @@
 {
   "name": "NetShare - WiFi QR Styler",
   "description": "Generate stylish, permanent WiFi QR codes with instant connection support. Includes local storage history and network detection (best-effort).",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": []
 }
